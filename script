@@ -1,0 +1,146 @@
+#!/bin/bash
+#V0.1 Creado por Aldo Velasco AVELAZCX 
+#V0.2 Printing to log file  AVELAZCX & IVAN(Master)
+#V1.1 Fix bug on Log File Root User  AVELAZCX
+
+USAGE="Only usage knl1.0 < LOG_FILE > and log file save in /tmp/"
+# Verify number of arguments
+if [[ $# != 1 ]] ; then
+    echo -e "ERROR: Missing Argument(s)!"
+    echo -e $USAGE
+    exit
+fi
+sudo cp /tmp/$LOG_FILE ~
+while :
+do
+    
+    clear
+    whoami
+    cat<<EOF
+    =========================================================================================
+                                   ERROR INJECTION KNL SCRIPT 
+    -----------------------------------------------------------------------------------------
+                  USE SUDO                                       USE SUDO                               
+         ........................                        ........................
+          MOUNTING DEBUGFS                                    BIOS CONFIG EDIT
+          Cat debugs.          (1)                        Make Bioscfg     (11)
+          Mount debugfs.       (2)                        Show Bioscfg     (12) 
+         ........................
+          LOADING INJECTION MODULE                        Enable ECC       (13)
+          Cat Modules          (3)                        Enable APEI      (14)
+          Modprobe             (4)                                       Need .....Reboot (00)
+         ......USE ROOT..........                         Make Bioscfg1    (15)
+          INJECTION ERRORS          #(r) make root        Show bioscfg1    (16)
+          Into directorie      (5)                        
+          Cat Error type       (6)                        Disable ECC      (17)  
+          Firts Error Inject   (7)  #No Script            Disable APEI     (18)
+          Second Errror Inject (8)  #No Script                           Need .....Reboot (00)
+         ........................                         Make Bioscfg2    (19)
+         INJECTION ERRORS SCRIPT                          Show Bioscfg2    (20) 
+          First Error Inject   (9)  #With script
+          Second Error Inject  (10) #With script 
+    
+                                                            (0)Exit.     AVELAZCX
+    -----------------------------------------------------------------------------------------
+EOF
+
+LOG_FILE=$1
+echo "---------------------------------------------------------" >> /tmp/$LOG_FILE
+date >> /tmp/$LOG_FILE
+var=$PWD
+echo ">>>>>>>Starting $1 script<<<<<<<<" >> /tmp/$LOG_FILE
+
+    echo "Select optional number and press enter .... "
+    read  -n5 -r  	 
+    case "$REPLY" in
+    "1")  echo "Select .... "
+           echo "Debugs are mounted in...." >> /tmp/$LOG_FILE
+           cat /proc/mounts | grep debugfs | cut -d ' ' -f 2  2>&1 | tee -a  /tmp/$LOG_FILE ;;
+    "2")  echo "Select .... " 
+           echo "Mounting Debugfs on .... " >> /tmp/$LOG_FILE
+           sudo mount -t debugfs none /sys/kernel/debug 2>&1 | tee -a /tmp/$LOG_FILE ;;
+    "3")  echo "Select .... " 
+	   echo "Show Modules....:" >> /tmp/$LOG_FILE 
+ 	   cat /proc/modules | grep einj  2>&1| tee -a /tmp/$LOG_FILE ;;
+    "4")  echo "Select .... "
+	    echo "Intall Module error injection.... " >> /tmp/$LOG_FILE 
+	    sudo modprobe -v einj param_extension=1  2>&1 | tee -a /tmp/$LOG_FILE ;;
+    "5")  echo "Select .... " 
+	    echo "Into Directory.... " >> /tmp/$LOG_FILE 
+            cd /sys/kernel/debug/apei/einj  
+            pwd /tmp/$LOG_FILE ;;
+    "6")  echo "Select .... "
+           echo "Show module error inject.... " >>  /tmp/$LOG_FILE   
+	       cat available_error_type 2>&1 | tee -a /tmp/$LOG_FILE ;;
+    "7")  echo "Select .... "
+           echo "Injecting first error.... " >> /tmp/$LOG_FILE  
+           echo 0x00000020 >error_type  2>&1 | tee -a /tmp/$LOG_FILE
+           echo 0 >notrigger | tee -a /tmp/$LOG_FILE 
+           echo 0x0000000000010000 >param1  2>&1 | tee -a /tmp/$LOG_FILE
+           echo 0xfffffffffffff000 >param2  2>&1 | tee -a /tmp/$LOG_FILE
+           echo 1 >error_inject | tee -a /tmp/$LOG_FILE ;;
+    "8")  echo "Select .... "
+           echo "Injecting Second error.... " >> /tmp/$LOG_FILE  
+           echo 0x00000020 >error_type  2>&1 | tee -a /tmp/$LOG_FILE
+           echo 1 >notrigger | tee -a /tmp/$LOG_FILE
+           echo 0x0000000000010010 >param1  2>&1 | tee -a /tmp/$LOG_FILE
+           echo 0xffffffffffffffff >param2  2>&1 | tee -a /tmp/$LOG_FILE
+           echo 1 >error_inject  2>&1 | tee -a /tmp/$LOG_FILE;;
+    "9")  echo "Select .... "
+           echo "Injection First error with script.... " >> /tmp/$LOG_FILE 
+	       ./errinject.sh 0x20 0x0000000000010000 0xfffffffffffff000  2>&1 | tee -a /tmp/$LOG_FILE ;;
+    "10")  echo "Select .... "
+           echo "Injecting Second error with script.... " >> /tmp/$LOG_FILE 
+	       ./errinject.sh --notrigger 0x20 0x0000000000010010 0xffffffffffffffff  2>&1 | tee -a /tmp/$LOG_FILE;;
+    "r")  echo "Select .... "
+           echo "Change to Root user.... " >> /tmp/$LOG_FILE 
+               sudo ./knl1.1.sh $LOG_FILE ;;
+    "11")  echo "Select .... "
+           echo "Making Bioscfg file.... " >> /tmp/$LOG_FILE  
+	       sudo ./syscfg /s bioscfg.ini /b  2>&1 | tee -a /tmp/$LOG_FILE ;;
+    "12")  echo "Select .... " 
+           echo "Show bioscfg.... " >> /tmp/$LOG_FILE        
+           sudo cat bioscfg.ini | grep "APEI"  2>&1 | tee -a /tmp/$LOG_FILE ;;
+    "15")  echo "Select .... " 
+	       echo "Making bioscfg1 file.... " >> /tmp/$LOG_FILE 
+           sudo ./syscfg /s bioscfg1.ini /b   2>&1 | tee -a /tmp/$LOG_FILE ;;
+    "16")  echo "Select .... " 
+	       echo "Show bioscfg1.... " >> /tmp/$LOG_FILE 
+	       sudo cat bioscfg1.ini | grep "APEI"   2>&1 | tee -a /tmp/$LOG_FILE ;;
+    "19")  echo "Select .... " 
+	       echo "Making bioscfg2 file.... " >> /tmp/$LOG_FILE 
+           sudo ./syscfg /s bioscfg2.ini /b   2>&1 | tee -a /tmp/$LOG_FILE ;;
+    "20")  echo "Select .... " 
+	       echo "Show bioscfg2.... " >> /tmp/$LOG_FILE 
+           sudo cat bioscfg2.ini | grep "APEI"   2>&1 | tee -a /tmp/$LOG_FILE ;;
+    "13")  echo "Select .... " 
+	       echo "Enabling ECC Config.... " >> /tmp/$LOG_FILE 
+           sudo ./syscfg /bcs "" "Memory Confuration" "ECC Support" 01   2>&1 | tee -a /tmp/$LOG_FILE ;;
+    "14")  echo "Select .... " 
+           echo "Enabling APEI Settings.... " >> /tmp/$LOG_FILE 
+           cd /usr/bin/syscfg/ | tee -a /tmp/$LOG_FILE
+	       sudo ./syscfg /bcs "" "APEI Settings" "APEI Support" 01  2>&1 | tee -a /tmp/$LOG_FILE 
+	       sleep 2
+           sudo ./syscfg /bcs "" "APEI Settings" "APEI Error Injection 5.0 Extension" 01   2>&1 | tee -a /tmp/$LOG_FILE
+           sleep 2
+           sudo ./syscfg /bcs "" "APEI Settings" "APEI FFM Logging" 01  2>&1 | tee -a /tmp/$LOG_FILE ;;
+    "17")  echo "Select .... " 
+	       echo "Disabling ECC Config.... " >> /tmp/$LOG_FILE 
+           sudo ./syscfg /bcs "" "Memory Configuration" "ECC Support" 00  2>&1 | tee -a /tmp/$LOG_FILE ;;
+    "18")  echo "Select .... " 
+	       echo "Disabling APEI Settings.... " >> /tmp/$LOG_FILE 
+           sudo ./syscfg /bcs "" "APEI Settings" "APEI FFM Logging" 00  2>&1 | tee -a /tmp/$LOG_FILE ;
+           sleep 2
+	       sudo ./syscfg /bcs "" "APEI Settings" "APEI Error Injection 5.0 Extension" 00  2>&1 | tee -a /tmp/$LOG_FILE ;
+           sleep 2
+	       sudo ./syscfg /bcs "" "APEI Settings" "APEI Support" 00   2>&1 | tee -a /tmp/$LOG_FILE ;;
+    "00")  echo "Select .... "
+	     echo "Restart now .... " >> /tmp/$LOG_FILE
+             sudo reboot 2>&1 | tee -a /tmp/$LOG_FILE ;;  
+    "0")  exit                      ;;
+    "0")  echo "case sensitive!!" 2>&1 | tee -a /tmp/$LOG_FILE   ;; 
+     * )  echo "invalid option"   2>&1 | tee -a /tmp/$LOG_FILE  ;;
+     esac
+     sleep 2
+done
+
